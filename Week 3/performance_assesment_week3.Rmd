@@ -1,0 +1,171 @@
+---
+title: "Performance Assesment - Regression"
+author: "Praneeth Kandula"
+date: "April 13, 2017"
+output: html_document
+---
+***
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "F:/USF/machinelearning/week3/")
+```
+
+```{r}
+library(ggplot2)
+
+#Read in train data and  sort by sqft_living and break ties using price.
+train <- read.csv("kc_house_data.csv",stringsAsFactors = F)
+train <- train[order(train$sqft_living,train$price),]
+
+```
+
+Function that returns a data frame with feature raised to polynomial degrees.
+```{r}
+
+polynomial_sframe <- function(feature,degree) {
+  
+  df <- data.frame(feature=feature)
+  if(degree > 1) {
+  
+  for (i in 2:degree) {
+    df <- cbind(df,feature^(i))
+    names(df)[i] <- paste0("feature_power_",i)
+   
+    }  
+  }
+  return(df)
+}
+```
+
+First Degree Polynomial
+```{r}
+
+poly1_data <- polynomial_sframe(train$sqft_living,1)
+poly1_data <- cbind(poly1_data,price=train$price)
+
+model1 <- lm(price~., data = poly1_data)
+model1preds <- predict(model1)
+
+ggplot(data=poly1_data,aes(feature,price))+geom_point(color="skyblue")+
+  geom_line(aes(poly1_data$feature,model1preds),color="black",size=.6)+
+  theme_minimal()
+
+model1$coefficients
+
+```
+
+Second Degree Polynomial
+```{r}
+poly2_data <- polynomial_sframe(train$sqft_living,2)
+poly2_data <- cbind(poly2_data,price=train$price)
+model2 <- lm(price~., data = poly2_data)
+model2preds <- predict(model2)
+
+ggplot(data=poly2_data,aes(feature,price))+geom_point(color="skyblue")+
+  geom_line(aes(poly2_data$feature,model2preds),color="black",size=.6)+
+  theme_minimal()
+
+model2$coefficients
+```
+
+Third Degree Polynomial
+```{r}
+poly3_data <- polynomial_sframe(train$sqft_living,3)
+poly3_data <- cbind(poly3_data,price=train$price)
+model3 <- lm(price~., data = poly3_data)
+model3preds <- predict(model3)
+
+ggplot(data=poly3_data,aes(feature,price))+geom_point(color="skyblue")+
+  geom_line(aes(poly3_data$feature,model3preds),color="black",size=.6)+
+  theme_minimal()
+
+model3$coefficients
+```
+
+Fifteenth Degree Polynomial
+```{r}
+poly15_data <- polynomial_sframe(train$sqft_living,15)
+poly15_data <- cbind(poly15_data,price=train$price)
+model15 <- lm(price~., data = poly15_data)
+model15preds <- predict(model15)
+
+ggplot(data=poly15_data,aes(feature,price))+geom_point(color="skyblue")+
+  geom_line(aes(poly15_data$feature,model15preds),color="black",size=.6)+
+  theme_minimal()
+
+model15$coefficients
+```
+
+```{r}
+set1 <- read.csv("wk3_kc_house_set_1_data.csv",stringsAsFactors = F)
+set2 <- read.csv("wk3_kc_house_set_2_data.csv",stringsAsFactors = F)
+set3 <- read.csv("wk3_kc_house_set_3_data.csv",stringsAsFactors = F)
+set4 <- read.csv("wk3_kc_house_set_4_data.csv",stringsAsFactors = F)
+
+```
+
+Function which returns coefficients and plot given dataset.
+```{r}
+create_model <- function(dataset) {
+feat <- dataset$sqft_living  
+poly_dataset <- polynomial_sframe(feat,15)
+poly_dataset <- cbind(poly_dataset,price=dataset$price)
+model_dataset <- lm(price~.,data=poly_dataset)
+
+model_dataset_preds <- predict(model_dataset)
+ 
+list(model_dataset$coefficients,
+ggplot(data=poly_dataset,aes(feature,price))+geom_point(color="skyblue")+
+  geom_line(aes(poly_dataset$feature,model_dataset_preds),color="black",size=.6)+
+  theme_minimal())
+
+}
+
+
+```
+
+```{r}
+create_model(set1)
+create_model(set2)
+create_model(set3)
+create_model(set4)
+
+
+#Quiz question-1 answer - modelset4 has negative coefficient for feature_power_15 while the remaining three models have a positive sign.
+
+#If you see the coefficients of the first three models for feature_poer_15, they are actually NA, this is because lm function in R recognises that the variable is linearly dependent on the other variables provided and hence does not get any new information from that variable, hence it eliminates it.
+
+#Quiz Question-2 answer from the plots we see that the lines are all different for the four sets.
+
+
+```
+
+Performing Cross Validation to find the best degree.
+```{r}
+
+train_newdata <- read.csv("wk3_kc_house_train_data.csv",stringsAsFactors = F)
+test_newdata <- read.csv("wk3_kc_house_valid_data.csv",stringsAsFactors = F)
+valid_newdata <- read.csv("wk3_kc_house_test_data.csv",stringsAsFactors = F)
+
+rss <- vector()
+
+for (i in 1:15) {
+  
+  polydata_new <- polynomial_sframe(train_newdata$sqft_living,i)
+  polydata_new <- cbind(polydata_new,price=train_newdata$price)
+  
+  valid_poly <- polynomial_sframe(valid_newdata$sqft_living,i)
+  valid_poly <- cbind(valid_poly,price=valid_newdata$price)
+  
+  model_new <- lm(price~.,data = polydata_new)
+  model_new_preds <- predict(model_new,valid_poly)
+  
+  rss <- cbind(rss,sum((model_new_preds - valid_newdata$price)^2))
+  
+}
+
+which.min(rss)
+```
+
+
+####Note: The coefficients of regression models and hence the result of the cross validation differ due to different implementations of the regression algorithm in R and Python. 
