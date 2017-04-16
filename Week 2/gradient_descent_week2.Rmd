@@ -1,0 +1,147 @@
+---
+title: "Gradient Descent For multiple Regression"
+author: "Praneeth Kandula"
+date: "April 13, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'F:/USF/machinelearning/')
+```
+
+***
+#####Function that returns a feature matrix and output array. 
+```{r}
+get_data <- function(df,features,output){
+    
+  feat_matrix <- matrix(rep(1,nrow(df)))
+  feat_matrix <- as.matrix(cbind(feat_matrix,as.matrix(df[features])))
+  output_array <- df[,output]
+    
+  return(list(feat_matrix,output_array))
+    
+  }
+```
+
+#####Function that returns predictions from the feature matrix and Regression weights.
+```{r}
+predict_output <- function(featmat,weights) {
+    
+  predictions <- featmat %*% weights
+  return(predictions)
+  
+  }
+```
+
+#####Function that returns the derivative of the regression cost function.
+```{r}
+feature_derivative <- function(feature,error){
+    return((2*(sum((feature * error)))))
+    
+  }
+```
+
+#####Gradient Descent Algorithm
+```{r}
+grad_desc <- function(feature_matrix,output,initial_weights,step_size,tolerance) {
+    
+  converged <- FALSE
+  weights <- initial_weights
+  
+  while (!converged) {
+    preds<- predict_output(feature_matrix,weights)
+    error <- preds-output
+      
+    gradient_ss <- 0
+      
+      
+    for (i in 1:length(weights)) {
+        
+        der <- feature_derivative(feature_matrix[,i],error)
+        gradient_ss <- gradient_ss+(der^2)
+        weights[i] <- weights[i]-(step_size*der)
+        
+        }
+      
+    gradient_magnitude <- sqrt(gradient_ss)
+    if ( gradient_magnitude < tolerance) { converged <- TRUE}
+      
+    }
+    return(weights)
+    }
+```
+
+***
+Regression Model with single feature.
+```{r}
+train <- read.csv("kc_house_train_data.csv",stringsAsFactors = F)
+test <- read.csv("kc_house_test_data.csv",stringsAsFactors = F)
+
+feat_matrix<- get_data(train,"sqft_living","price")[[1]]
+output_array<- get_data(train,"sqft_living","price")[[2]]
+ 
+initial_weights <- c(-47000,1)
+step_size <- 7e-12
+tolerance <- 2.5e7
+
+
+simple_weights <- grad_desc(feat_matrix,output_array,initial_weights,step_size,tolerance)
+#second element of simple_weights is the answer to quiz question 1.
+simple_weights
+
+```
+
+
+```{r}
+test_simple_feature_matrix <- get_data(test,"sqft_living","price")[[1]]
+test_output_array<- get_data(test,"sqft_living","price")[[2]]
+
+test_preds <- predict_output(test_simple_feature_matrix,simple_weights)
+rss_test_data <- sum((test_preds- test_output_array)^2)
+#test_preds[1] i.e the first element of test_preds is the answer to quiz question 2.
+test_preds[1]
+```
+
+Regression Model with Multiple Features. 
+```{r}
+model_feature_matrix <- get_data(train,c("sqft_living","sqft_living15"),"price")[[1]]
+model_output_array<- get_data(train,c("sqft_living","sqft_living15"),"price")[[2]]
+ 
+model_initial_weights <- c(-100000,1,1)
+model_step_size <- 4e-12
+model_tolerance <- 1e9
+ 
+model_weights <- grad_desc(model_feature_matrix,model_output_array,model_initial_weights,model_step_size,model_tolerance)
+
+
+model_test_feat_matrix <- get_data(test,c("sqft_living","sqft_living15"),"price")[[1]]
+model_test_output_array<- get_data(test,c("sqft_living","sqft_living15"),"price")[[2]]
+ 
+model_test_preds <-  predict_output(model_test_feat_matrix,model_weights)
+#First element of model_test_preds is the answer for quiz question 3.
+model_test_preds[1]
+```
+
+
+
+```{r}
+#price predicted by the two models. We see that the model1 made a closer estimate which is the answer to quiz question 4.
+test$price[1]
+test_preds[1]
+model_test_preds[1]
+```
+
+
+```{r}
+rss_model_test_data <- sum((model_test_preds - model_test_output_array)^2)
+#model 2 has overall lower RSS which is the answer to quiz question 5.
+rss_test_data 
+rss_model_test_data
+
+ 
+ 
+ 
+```
+
+
