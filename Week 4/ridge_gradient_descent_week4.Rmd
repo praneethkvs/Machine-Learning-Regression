@@ -1,0 +1,173 @@
+---
+title: "Rige Regression with Gradient Descent"
+author: "Praneeth Kandula"
+date: "April 16, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "F:/USF/machinelearning/week4/")
+```
+
+Load Packages
+```{r}
+library(ggplot2)
+```
+
+```{r}
+
+get_data <- function(df,features,output){
+  
+  feat_matrix <- matrix(rep(1,nrow(df)))
+  feat_matrix <- as.matrix(cbind(feat_matrix,as.matrix(df[features])))
+  output_array <- df[,output]
+  return(list(feat_matrix,output_array))
+  
+}
+```
+
+```{r}
+
+predict_output <- function(featmat,weights) {
+  predictions <- featmat %*% weights
+  return(predictions)
+}
+```
+
+L2 penalty for Ridge Regression.
+```{r}
+
+feature_derivative <- function(feature,error,weight,l2_penalty){
+  return((2*(sum((feature * error))) + 2*(l2_penalty*weight)))
+}
+```
+
+```{r}
+grad_desc <- function(feature_matrix,output,initial_weights,step_size,l2_penalty,max_iterations=100) {
+  
+  weights <- initial_weights
+  
+  for (i in 1:max_iterations) {
+    
+    
+    preds<- predict_output(feature_matrix,weights)
+    error <- preds-output
+    
+    
+    for (i in 1:length(weights)) {
+      der <- feature_derivative(feature_matrix[,i],error,weights[i],l2_penalty)
+      weights[i] <- weights[i]-(step_size*der)
+      }
+    }
+  return(weights)
+}
+
+
+```
+
+Load data and initialize function arguments.
+```{r}
+train <- read.csv("kc_house_train_data.csv",stringsAsFactors = F)
+test <- read.csv("kc_house_test_data.csv",stringsAsFactors = F)
+
+step_size <- 1e-12
+max_iterations <- 1000
+initial_weights <- c(0,0)
+```
+
+Create Feature Matrix
+```{r}
+feat_matrix<- get_data(train,"sqft_living","price")[[1]]
+output_array<- get_data(train,"sqft_living","price")[[2]]
+
+```
+
+Create two models, one with zero L2 penalty(OLS regression) and other with high L2 penalty((Ridge Regression). 
+```{r}
+
+simple_weights_0_penalty <- grad_desc(feat_matrix,output_array,initial_weights,
+                                      step_size,l2_penalty = 0,max_iterations)
+
+simple_weights_high_penalty <- grad_desc(feat_matrix,output_array,initial_weights,
+                                         step_size,l2_penalty = 1e11,max_iterations)
+
+```
+
+Comparing and Visualising Models
+```{r}
+
+#Coefficients of sqft_living in both models
+simple_weights_0_penalty[2]
+simple_weights_high_penalty[2]
+
+```
+
+```{r}
+#We can see from the two plots, The one 0_penalty is steeper.
+ggplot(data=train,aes(sqft_living,price))+geom_point(color="skyblue")+
+  geom_line(aes(train$sqft_living,predict_output(feat_matrix,simple_weights_0_penalty)),color="black",size=.6)+
+  theme_minimal()
+
+```
+
+```{r}
+
+ggplot(data=train,aes(sqft_living,price))+geom_point(color="skyblue")+
+  geom_line(aes(train$sqft_living,predict_output(feat_matrix,simple_weights_high_penalty)),color="black",size=.6)+
+  theme_minimal()
+
+```
+
+```{r}
+
+#Get test feature matrix
+test_feat_matrix<- get_data(test,"sqft_living","price")[[1]]
+test_output_array<- get_data(test,"sqft_living","price")[[2]]
+
+#Rss on Test data 
+test_preds_0 <- predict_output(test_feat_matrix,simple_weights_0_penalty)
+rss_test_0 <- sum((test_preds_0-test$price)^2)
+rss_test_0
+```
+
+Mode with Two features
+```{r}
+multiple_initial_weights <- c(0,0,0)
+
+two_feat_matrix<- get_data(train,c("sqft_living","sqft_living15"),"price")[[1]]
+two_output_array<- get_data(train,c("sqft_living","sqft_living15"),"price")[[2]]
+
+multiple_weights_penalty_0 <- grad_desc(two_feat_matrix,two_output_array,multiple_initial_weights,
+                                        step_size,l2_penalty = 0,max_iterations)
+
+multiple_weights_penalty_high <- grad_desc(two_feat_matrix,two_output_array,multiple_initial_weights,
+                                        step_size,l2_penalty = 1e11,max_iterations)
+
+```
+
+```{r}
+test_two_feat_matrix<- get_data(test,c("sqft_living","sqft_living15"),"price")[[1]]
+test_two_output_array<- get_data(test,c("sqft_living","sqft_living15"),"price")[[2]]
+
+multiple_0_preds <- predict_output(test_two_feat_matrix,multiple_weights_penalty_0)
+rss_multiple_0 <- sum((test$price- multiple_0_preds)^2)
+rss_multiple_0
+
+
+multiple_high_preds <- predict_output(test_two_feat_matrix,multiple_weights_penalty_high)
+rss_multiple_high <- sum((test$price- multiple_high_preds)^2)
+rss_multiple_high
+
+
+```
+
+```{r}
+
+test$price[1]
+multiple_0_preds[1]
+multiple_high_preds[1]
+
+##High Regularization model makes better predictions.
+```
+
