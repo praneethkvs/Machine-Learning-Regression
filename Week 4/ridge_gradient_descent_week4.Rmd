@@ -7,7 +7,6 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "F:/USF/machinelearning/week4/")
 ```
 
 Load Packages
@@ -16,7 +15,6 @@ library(ggplot2)
 ```
 
 ```{r}
-
 get_data <- function(df,features,output){
   
   feat_matrix <- matrix(rep(1,nrow(df)))
@@ -28,7 +26,6 @@ get_data <- function(df,features,output){
 ```
 
 ```{r}
-
 predict_output <- function(featmat,weights) {
   predictions <- featmat %*% weights
   return(predictions)
@@ -37,7 +34,6 @@ predict_output <- function(featmat,weights) {
 
 L2 penalty for Ridge Regression.
 ```{r}
-
 feature_derivative <- function(feature,error,weight,l2_penalty){
   return((2*(sum((feature * error))) + 2*(l2_penalty*weight)))
 }
@@ -62,8 +58,6 @@ grad_desc <- function(feature_matrix,output,initial_weights,step_size,l2_penalty
     }
   return(weights)
 }
-
-
 ```
 
 Load data and initialize function arguments.
@@ -158,8 +152,6 @@ rss_multiple_0
 multiple_high_preds <- predict_output(test_two_feat_matrix,multiple_weights_penalty_high)
 rss_multiple_high <- sum((test$price- multiple_high_preds)^2)
 rss_multiple_high
-
-
 ```
 
 ```{r}
